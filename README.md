@@ -1,100 +1,136 @@
-# I-Viewer Copilot for Digital Pathology
-## Introduction
-I-viewer copilot is a comprehensive online framework designed to address the needs of collaborative pathology analysis while harnessing the power of AI. I-viewer deployed advanced real-time AI-agents for different tasks and relies on MLLM for information integration and Human-AI collaboration. 
 
-## Installation
-1. Clone the repo
-```
-git clone https://github.com/impromptuRong/iviewer_copilot.git
-cd iviewer_copilot
-```
-2. Install ollama from https://ollama.com/download, and start ollama server (Optional)
+# Integrating StarDist into I-Viewer for Cell Segmentation and Classification
 
-For Image Captioning:
-```
-export OLLAMA_HOST="0.0.0.0:11434"
-export OLLAMA_ORIGINS="*"
+This project demonstrates how to **integrate a custom cell segmentation/classification model** into [I-Viewer](https://github.com/impromptuRong/iviewer_copilot). As an example, it shows how to plug in a **StarDist model pretrained on the CoNIC Challenge dataset** for **nuclei segmentation** and **classification** within H&E images.
 
-ollama pull llava
-ollama serve
-```
+---
 
-For LLM Copilot:
-```
-export OLLAMA_HOST="0.0.0.0:11435"
-export OLLAMA_ORIGINS="*"
+## Overview
 
-ollama pull llama3
-ollama serve
-```
+- Uses `StarDist2D` from the [`stardist`](https://github.com/stardist/stardist) Python package
+- Model trained on CoNIC: [Colon Nuclei Identification and Counting](https://conic-challenge.grand-challenge.org/)
 
-3. Start Segment Anything Worker (Optional) on a GPU server
-```
-export MODEL_REGISTRY=sam2-b
-export REDIS_HOST=localhost
-export REDIS_PORT=6379
-nohup celery -A app_worker.celery worker --loglevel=info -Q sam2-b > z.sam2_b.log &
-python app_queue.py
+---
+
+## Project Structure
+
+```bash
+.
+├── nuclei/
+│   ├── sd_tf/
+│   │   ├── __init__.py              # Model config (StardistConfig_tf)
+│   │   ├── generator.py             # Data pipeline (StardistGenerator_tf)
+│   │   ├── model_stardist.py       # Main logic (StardistSegmentation_tf)
+│   └── model_registry.py           # Service registration
+├── ckpts/
+│   └── nuclei-stardist/
+│       └── stardist_conic/         # Pretrained model files
+└── README.md
 ```
 
-3. Create an `.env` file with the following contents to specify MLLM service and SAM service.
-```
-SLIDES_DIR=input_slides_folder
-DATABASE_DIR=./databases
-OLLAMA_HOST_LLM=localhost
-OLLAMA_PORT_LLM=11434
-OLLAMA_HOST_MLLM=localhost
-OLLAMA_PORT_MLLM=11435
-OPENAI_API_KEY=openai_api_key
-SEGMENT_HOST=localhost
-SEGMENT_PORT=8376
-```
-I-Viewer rely on `ollama` or `openai API` to enable chatbot and captioning service. For GPT user, put openai_api_key into the `.env` file as above. For `ollama` user, we recommend to host ollama service on a separate server. (Instructions about how to set up ollama and LLM models can be found here: https://github.com/ollama/ollama)
+---
 
-4. Start server with docker
-```
-docker compose up -d
-```
+## Steps to Integrate a New Model
 
-Then you can connect the backend API with frontend server. Or view a demo by opening the `./templates/index.html`
+### 1. Update `StardistConfig_tf` in `nuclei/sd_tf/__init__.py`
 
-## Adding Agents to I-Viewer Copilot
-User can integrate additional agent into the RAG system through function registration. The function registration requires the following parameters:
-1. name: the name of this agent, must be unique.
-2. type: the type of this agent, one of `FunctionTool` or `QueryEngineTool` or None. (More llama_index tool will be supported in future)
-3. input_mapping: this will map function args with RAG memory. 
-4. output_mapping: this will map the agent output to the RAG memory, results in RAG memory can be further used by other functions for chain of thoughts and hierarchical agent calling.
-5. description: the detail description about the agent, what can the agent do, what types of results the agent can provide. The RAG system will heavily rely on the description to determine answering logic. 
-6. return_direct: whether to directly return function results, or wrap the results into language template.
+Define server name, tile size, class labels, and device.
 
-The following example registered a basic function to summarize nuclei composition in annotation databases. In the I-Viewer, `image`, `annotations`, `roi`, `description` information will be auto-loaded when the copilot window start.
-```
-## Basic nuclei summary function
-description = f"""\
-    Summarize the nuclei information from a given dataframe. \
-    This tool calculates the statistical summary of nuclei for each different type. 
-    Use this tool to answer user questions about percentage, count about nuclei.
-"""
-@register_agent(
-    name='nuclei_composition',
-    type='FunctionTool',
-    input_mapping={'entries': 'annotations',},
-    output_mapping='nuclei_composition_statistics',
-    description=description,
-    return_direct=False,
-)
-def nuclei_composition_summary(entries):
-    df = pd.DataFrame(entries)
-    if not df.empty:
-        res = df['label'].value_counts().to_dict()
-    else:
-        res = {}
-    
-    return res
+```python
+class StardistConfig_tf(BaseModel):
+    model_path: str
+    server: str = 'stardist_tf'
+    device: str = 'cpu'
+    batch_size: int = 1
+    default_input_size: int = 320
+    dzi_settings: Dict[str, Any] = {
+        'format': 'jpeg', 
+        'tile_size': 512, 
+        'overlap': 64, 
+        'limit_bounds': False, 
+        'tile_quality': 50,
+    }
+    ...
+    labels: List[str] = ['bg', 'Neutrophil', 'Epithelial', 'Lymphocyte', 'Plasma', 'Eosinophil', 'Connective']
+    labels_color: Dict[str, str] = {0: "#ffffff", 1: "#00ff00", ...}
+    labels_text: Dict[int, str] = {0: 'bg', 1: 'Neutrophil', ...}
 ```
 
-## License
+---
 
-The software package is [licensed](https://github.com/impromptuRong/iviewer_copilot/blob/master/LICENSE). 
-For commercial use, please contact [Ruichen Rong](Ruichen.Rong@UTSouthwestern.edu), [Xiaowei Zhan](mailto:Xiaowei.Zhan@UTSouthwestern.edu) and
-[Guanghua Xiao](mailto:Guanghua.Xiao@UTSouthwestern.edu).
+### 2. Rename or Extend the Generator Class
+
+The `StardistGenerator_tf` class in `generator.py` prepares image tiles. You can reuse existing logic or rename parameters as needed.
+
+---
+
+### 3. Implement the Inference Pipeline
+
+In `model_stardist.py`, define the `StardistSegmentation_tf` class with the following stages:
+
+- **Initialization**:
+ ```python
+ class StardistSegmentation_tf:
+    def __init__(self, configs, device='cpu'):
+        self.configs = configs
+        self.model = self.load_model(configs.model_path, device=device)
+        self.input_size = (self.configs.default_input_size, self.configs.default_input_size)
+ ```
+
+- **Model loading**:  
+  ```python
+    def load_model(self, model, device='cpu'):
+        stardist_model = StarDist2D(None, name=os.path.basename(model), basedir=os.path.dirname(model))
+        return stardist_model
+  ```
+
+- **Preprocessing**:  
+  Purpose: Resizes each image tile to the model’s expected input size and normalizes the pixel values.
+  Input: List of raw RGB image tiles.
+  Output: List of normalized images as the model’s inputs.
+
+- **Prediction**:  
+  Uses `model.predict_instances()` to obtain the predictions using Stardist.
+
+- **Postprocessing**:  
+  Purpose: Converts model output to I-Viewer's expected format with:
+  Input: 
+    `preds`: Predictions from Stardist model.
+    `image_sizes`: numpy array of shape `(B, 2)` with original image tile sizes (height, width) for rescaling polygon coordinates back to original scale.
+  Output: A list of prediction results -- one for each input image tile: `[pred0, pred1, pred2, ...]`. Each predX is a Python dictionary with keys:
+
+| Key     | Type        | Description                        |
+|---------|-------------|------------------------------------|
+| `boxes` | `np.ndarray` | (Nc, 4) bounding boxes per cell     |
+| `labels` | `np.ndarray` | Class index for each instance       |
+| `scores` | `np.ndarray` | Confidence score per detection      |
+| `masks`  | `List[np.ndarray]` | Polygon coordinates for each cell |
+
+---
+
+### 4. Register the Model
+
+In `nuclei/model_registry.py`:
+
+```python
+from sd_tf import StardistSegmentation_tf, StardistGenerator_tf, StardistConfig_tf
+
+MODEL_REGISTRY.register("stardist_tf", "model", StardistSegmentation_tf)
+MODEL_REGISTRY.register("stardist_tf", "generator", StardistGenerator_tf)
+
+AGENT_CONFIGS = {
+    'stardist-tf': StardistConfig_tf(
+        model_path = "./ckpts/nuclei-stardist/stardist_conic"
+    )
+}
+```
+
+---
+
+## Run the Integration
+
+1. Write a docker file for the new model as `nuclei/Dockerfile.stardist_tf`
+2. Update docker-compose.yml to Add Stardist Service
+
+---
+
