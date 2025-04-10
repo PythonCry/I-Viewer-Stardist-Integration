@@ -2,7 +2,7 @@
 
 # Integrating StarDist into I-Viewer for Cell Segmentation and Classification
 
-This project demonstrates how to **integrate a custom cell segmentation/classification model** into [I-Viewer](https://github.com/impromptuRong/iviewer_copilot). As an example, it shows how to plug in a **StarDist model pretrained on the [CoNIC Challenge](https://conic-challenge.grand-challenge.org/) dataset** for **nuclei segmentation** and **classification** within H&E images.
+This repository demonstrates how to **integrate a custom cell segmentation/classification model** into [I-Viewer](https://github.com/impromptuRong/iviewer_copilot). As an example, it shows how to plug in a **StarDist model pretrained on the [CoNIC Challenge](https://conic-challenge.grand-challenge.org/) dataset** for **nuclei segmentation** and **classification** within H&E images.
 
 ![Alt Text](images/I-Viewer-Stardist.png)
 
