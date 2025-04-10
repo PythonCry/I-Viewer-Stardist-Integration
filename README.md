@@ -138,3 +138,9 @@ AGENT_CONFIGS = {
 
 ---
 
+## License
+
+The software package is [licensed](https://github.com/impromptuRong/iviewer_copilot/blob/master/LICENSE). 
+For commercial use, please contact [Ruichen Rong](Ruichen.Rong@UTSouthwestern.edu), [Xiaowei Zhan](mailto:Xiaowei.Zhan@UTSouthwestern.edu) and
+[Guanghua Xiao](mailto:Guanghua.Xiao@UTSouthwestern.edu).
+
