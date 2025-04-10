@@ -5,7 +5,6 @@ from .utils import export_detections_to_table, map_coords
 import numpy as np
 import os
 from stardist.models import StarDist2D
-import pdb
 
 class StardistSegmentation_tf:
     def __init__(self, configs, device='cpu'):
