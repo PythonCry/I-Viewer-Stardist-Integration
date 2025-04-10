@@ -93,11 +93,12 @@ In `model_stardist.py`, define the `StardistSegmentation_tf` class with the foll
   Uses `model.predict_instances()` to obtain the predictions using Stardist.
 
 - **Postprocessing**:  
-  Purpose: Converts model output to I-Viewer's expected format with:
-  Input: 
-    `preds`: Predictions from Stardist model.
+  Purpose: Converts model output to I-Viewer's expected format with:  
+  Input:   
+    `preds`: Predictions from Stardist model.  
     `image_sizes`: numpy array of shape `(B, 2)` with original image tile sizes (height, width) for rescaling polygon coordinates back to original scale.
-  Output: A list of prediction results -- one for each input image tile: `[pred0, pred1, pred2, ...]`. Each predX is a Python dictionary with keys:
+  Output: A list of prediction results -- one for each input image tile: `[pred0, pred1, pred2, ...]`.  
+  Each predX is a Python dictionary with keys:  
 
 | Key     | Type        | Description                        |
 |---------|-------------|------------------------------------|
@@ -130,7 +131,7 @@ AGENT_CONFIGS = {
 ## Run the Integration
 
 1. Write a docker file for the new model as `nuclei/Dockerfile.stardist_tf`
-2. Update docker-compose.yml to Add Stardist Service
+2. Update `docker-compose.yml` to Add Stardist Service
 
 ---
 
