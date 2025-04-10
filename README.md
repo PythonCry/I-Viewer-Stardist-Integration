@@ -87,7 +87,7 @@ In `model_stardist.py`, define the `StardistSegmentation_tf` class with the foll
 
 | Key     | Type        | Shape/Structure      |Description                        |
 |---------|-------------|------------------|------------------|
-| `boxes` | `np.ndarray` | (Nc, 4)         |bounding boxes per cell     |
+| `boxes` | `np.ndarray` | (Nc, 4)         |bounding boxes per cell: `[xmin, ymin, xmax, ymax]`    |
 | `labels` | `np.ndarray` | (Nc,)        |Class index for each instance       |
 | `scores` | `np.ndarray` | (Nc,)        |Confidence score per detection      |
 | `masks`  | `List[np.ndarray]` | Each element (Nc,2) |Polygon coordinates for each cell |
