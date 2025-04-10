@@ -15,24 +15,6 @@ This project demonstrates how to **integrate a custom cell segmentation/classifi
 
 ---
 
-## Project Structure
-
-```bash
-.
-├── nuclei/
-│   ├── sd_tf/
-│   │   ├── __init__.py              # Model config (StardistConfig_tf)
-│   │   ├── generator.py             # Data pipeline (StardistGenerator_tf)
-│   │   ├── model_stardist.py       # Main logic (StardistSegmentation_tf)
-│   └── model_registry.py           # Service registration
-├── ckpts/
-│   └── nuclei-stardist/
-│       └── stardist_conic/         # Pretrained model files
-└── README.md
-```
-
----
-
 ## Steps to Integrate a New Model
 
 ### 1. Update `StardistConfig_tf` in `nuclei/sd_tf/__init__.py`
