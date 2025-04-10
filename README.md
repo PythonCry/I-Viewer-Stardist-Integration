@@ -85,27 +85,27 @@ In `model_stardist.py`, define the `StardistSegmentation_tf` class with the foll
   ```
 
 - **Preprocessing**:  
-  Purpose: Resizes each image tile to the model’s expected input size and normalizes the pixel values.
-  Input: List of raw RGB image tiles.
-  Output: List of normalized images as the model’s inputs.
+  + Purpose: Resizes each image tile to the model’s expected input size and normalizes the pixel values.
+  + Input: List of raw RGB image tiles.
+  + Output: List of normalized images as the model’s inputs.
 
 - **Prediction**:  
   Uses `model.predict_instances()` to obtain the predictions using Stardist.
 
 - **Postprocessing**:  
-  Purpose: Converts model output to I-Viewer's expected format with:  
-  Input:   
-    `preds`: Predictions from Stardist model.  
-    `image_sizes`: numpy array of shape `(B, 2)` with original image tile sizes (height, width) for rescaling polygon coordinates back to original scale.
-  Output: A list of prediction results -- one for each input image tile: `[pred0, pred1, pred2, ...]`.  
-  Each predX is a Python dictionary with keys:  
+  + Purpose: Converts model output to I-Viewer's expected format with:  
+  + Input:   
+    + `preds`: Predictions from Stardist model.  
+    + `image_sizes`: numpy array of shape `(B, 2)` with original image tile sizes (height, width) for rescaling polygon coordinates back to original scale.  
+  + Output: A list of prediction results -- one for each input image tile: `[pred0, pred1, pred2, ...]`.  
+  Each predX is a Python dictionary with keys in the following table, and Nc is the count of the detected cells in that tile. 
 
-| Key     | Type        | Description                        |
-|---------|-------------|------------------------------------|
-| `boxes` | `np.ndarray` | (Nc, 4) bounding boxes per cell     |
-| `labels` | `np.ndarray` | Class index for each instance       |
-| `scores` | `np.ndarray` | Confidence score per detection      |
-| `masks`  | `List[np.ndarray]` | Polygon coordinates for each cell |
+| Key     | Type        | Shape/Structure      |Description                        |
+|---------|-------------|------------------|------------------|
+| `boxes` | `np.ndarray` | (Nc, 4)         |bounding boxes per cell     |
+| `labels` | `np.ndarray` | (Nc,)        |Class index for each instance       |
+| `scores` | `np.ndarray` | (Nc,)        |Confidence score per detection      |
+| `masks`  | `List[np.ndarray]` | Each element (Nc,2) |Polygon coordinates for each cell |
 
 ---
 
