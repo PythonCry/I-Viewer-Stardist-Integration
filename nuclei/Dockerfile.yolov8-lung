@@ -1,0 +1,24 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+COPY nuclei/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY nuclei/. .
+COPY utils ./utils
+
+# Download the onnx and TensorRT model weight
+RUN pip install gdown
+RUN mkdir -p /app/ckpts/nuclei-yolov8-lung
+RUN gdown 1TZhdmUfVe2Q78Vvu4Ex75Qt5geh0SsuZ -O /app/ckpts/nuclei-yolov8-lung/best.onnx
+# RUN gdown 1q8KWSgxUZkv2Py1kFb5D-kL3mh2YcfRj -O /app/ckpts/nuclei-yolov8-lung/best.engine
+
+#RUN mkdir -p app/ckpts/nuclei-stardist/
+
+#COPY nuclei/stardist_conic /app/ckpts/nuclei-stardist/stardist_conic
+#COPY nuclei/stardist_model.onnx /app/ckpts/nuclei-stardist/best.onnx
+#COPY nuclei/stardist2d.so .
+
+# RUN export no_proxy="localhost"
+
+CMD ["python", "app_consumer.py", "yolov8-lung"]

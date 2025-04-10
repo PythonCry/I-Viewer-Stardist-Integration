@@ -1,0 +1,10 @@
+FROM python:3.9-slim
+
+WORKDIR /app
+COPY nuclei/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY nuclei/. .
+COPY utils ./utils
+RUN mkdir -p app/ckpts/nuclei-stardist/
+COPY nuclei/stardist_conic /app/ckpts/nuclei-stardist/stardist_conic
+CMD ["python", "app_consumer.py", "stardist-tf"]

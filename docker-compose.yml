@@ -1,0 +1,234 @@
+version: '3'
+
+networks:
+  iviewer-network:
+    driver: bridge
+
+services:
+  redis:
+    image: redis:latest
+    container_name: iviewer-redis
+    networks:
+      - iviewer-network
+
+  deepzoom:
+    image: iviewer-deepzoom:latest
+    container_name: iviewer-deepzoom
+    build:
+      context: .
+      dockerfile: ./deepzoom/Dockerfile
+    ports:
+      - "10010:9010"
+    depends_on:
+      - redis
+    networks:
+      - iviewer-network
+    volumes:
+      - ${SLIDES_DIR}:/app/abc
+      - ${DATABASE_DIR}:/app/databases
+    environment:
+      - DATABASE_PATH=/app/databases
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+
+  annotation:
+    image: iviewer-annotation:latest
+    container_name: iviewer-annotation
+    build:
+      context: .
+      dockerfile: ./annotation/Dockerfile
+    ports:
+      - "10020:9020"
+    depends_on:
+      - redis
+    networks:
+      - iviewer-network
+    volumes:
+      - ${SLIDES_DIR}:/app/abc
+      - ${DATABASE_DIR}:/app/databases
+    environment:
+      - DATABASE_PATH=/app/databases
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+
+  nuclei:
+    stdin_open: true
+    tty: true
+    image: iviewer-nuclei:latest
+    container_name: iviewer-nuclei
+    build:
+      context: .
+      dockerfile: ./nuclei/Dockerfile.queue
+    ports:
+      - "10030:9030"
+    depends_on:
+      - redis
+    networks:
+      - iviewer-network
+    volumes:
+      - ${SLIDES_DIR}:/app/abc
+      - ${DATABASE_DIR}:/app/databases
+    environment:
+      - DATABASE_PATH=/app/databases
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+  
+  yolov8_lung:
+    stdin_open: true
+    tty: true
+    image: iviewer-yolov8-lung:latest
+    container_name: iviewer-yolov8-lung
+    build:
+      context: .
+      dockerfile: ./nuclei/Dockerfile.yolov8-lung
+      args:
+        http_proxy: ${http_proxy}
+        https_proxy: ${https_proxy}
+    depends_on:
+      - redis
+      - nuclei
+    networks:
+      - iviewer-network
+    volumes:
+      - ${SLIDES_DIR}:/app/abc
+      - ${DATABASE_DIR}:/app/databases
+    environment:
+      - DATABASE_PATH=/app/databases
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+
+  yolov8_colon:
+    stdin_open: true
+    tty: true
+    image: iviewer-yolov8-colon:latest
+    container_name: iviewer-yolov8-colon
+    build:
+      context: .
+      dockerfile: ./nuclei/Dockerfile.yolov8-colon
+      args:
+        http_proxy: ${http_proxy}
+        https_proxy: ${https_proxy}
+    depends_on:
+      - redis
+      - nuclei
+    networks:
+      - iviewer-network
+    volumes:
+      - ${SLIDES_DIR}:/app/abc
+      - ${DATABASE_DIR}:/app/databases
+    environment:
+      - DATABASE_PATH=/app/databases
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+
+  stardist_tf:
+    stdin_open: true
+    tty: true
+    image: iviewer-stardist_tf:latest
+    container_name: iviewer-stardist_tf
+    build:
+      context: .
+      dockerfile: ./nuclei/Dockerfile.stardist_tf
+      args:
+        http_proxy: ${http_proxy}
+        https_proxy: ${https_proxy}
+    depends_on:
+      - redis
+      - nuclei
+    networks:
+      - iviewer-network
+    volumes:
+      - ${SLIDES_DIR}:/app/abc
+      - ${DATABASE_DIR}:/app/databases
+    environment:
+      - DATABASE_PATH=/app/databases
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+
+  copilot:
+    image: iviewer-copilot:latest
+    container_name: iviewer-copilot
+    build:
+      context: .
+      dockerfile: ./copilot/Dockerfile
+      args:
+        http_proxy: ${http_proxy}
+        https_proxy: ${https_proxy}
+    ports:
+      - "10040:9040"
+    depends_on:
+      - redis
+      - annotation
+    networks:
+      - iviewer-network
+    volumes:
+      - ${SLIDES_DIR}:/app/abc
+      - ${DATABASE_DIR}:/app/databases
+    environment:
+      - ANNOTATION_HOST=annotation
+      - ANNOTATION_PORT=9020
+      - OLLAMA_HOST_LLM=${OLLAMA_HOST_LLM}
+      - OLLAMA_PORT_LLM=${OLLAMA_PORT_LLM}
+      - OLLAMA_HOST_MLLM=${OLLAMA_HOST_MLLM}
+      - OLLAMA_PORT_MLLM=${OLLAMA_PORT_MLLM}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - http_proxy=${http_proxy}
+      - https_proxy=${https_proxy}
+      - NO_PROXY=localhost,127.0.0.1,annotation,${OLLAMA_HOST_LLM},${OLLAMA_HOST_MLLM}
+
+  # segmentation:
+  #   image: iviewer-segment:latest
+  #   container_name: iviewer-segment
+  #   build:
+  #     context: .
+  #     dockerfile: ./segmentation/Dockerfile.queue
+  #   ports:
+  #     - "10050:9050"
+  #   networks:
+  #     - iviewer-network
+  #   volumes:
+  #     - ${SLIDES_DIR}:/app/abc
+  #   environment:
+  #     - SEGMENT_HOST=${SEGMENT_HOST}
+  #     - SEGMENT_PORT=${SEGMENT_PORT}
+  #     - NO_PROXY=localhost,127.0.0.1,${SEGMENT_HOST}
+
+  segmentation:
+    image: iviewer-segment:latest
+    container_name: iviewer-segment
+    build:
+      context: .
+      dockerfile: ./segmentation/Dockerfile.joint
+    ports:
+      - "10050:9050"
+    networks:
+      - iviewer-network
+    volumes:
+      - ${SLIDES_DIR}:/app/abc
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - SEGMENT_HOST=${SEGMENT_HOST}
+      - SEGMENT_PORT=${SEGMENT_PORT}
+
+# ONLY include these when using local gpu
+  sam2:
+    profiles: ['local-gpu']
+    image: iviewer-sam2:latest
+    container_name: iviewer-sam2
+    build:
+      context: .
+      dockerfile: ./segmentation/Dockerfile.sam2
+      args:
+        http_proxy: ${http_proxy}
+        https_proxy: ${https_proxy}
+    depends_on:
+      - redis
+      - segmentation
+    networks:
+      - iviewer-network
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - MODEL_DEVICE=${SEGMENT_DEVICE}
+

@@ -1,0 +1,10 @@
+celery
+fastapi
+imagecodecs
+matplotlib
+pandas
+redis
+requests
+ultralytics
+scikit-image
+uvicorn
