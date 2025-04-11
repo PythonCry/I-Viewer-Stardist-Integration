@@ -27,32 +27,47 @@
     <script type="text/javascript" src="../static/utils.js"></script>
 
     <script>
-        const imgIdMap = {"9388.svs": "test",};
+        const imgIdMap = {"UTSW-Chi-CRC-HE-20x-20230313-0043.svs": "UTSW-Chi-CRC-HE-20x-20230313-0043",};
         const mpp = 0.25;
-        const imgName = "9388.svs";
+        const imgName = "UTSW-Chi-CRC-HE-20x-20230313-0043.svs";
         const slideFolder = "abc";
         const imgId = imgIdMap[imgName];
         const userId = "1";
         const userName = "user";
-        const userIdNameMap = {"1": "user", "yolov8-lung": "yolov8-lung", "yolov8-colon": "yolov8-colon",};
+        const userIdNameMap = {"1": "user", "yolov8-lung": "yolov8-lung", "yolov8-colon": "yolov8-colon", "stardist-tf": "stardist-tf"};
         const globalColorCodes = {
-            'bg': "#ffffff",
-            'tumor_nuclei': "#00ff00",
-            'stromal_nuclei': "#ff0000",
-            'immune_nuclei': "#0000ff",
-            'blood_cell': "#ff00ff",
-            'macrophage': "#ffff00",
-            'dead_nuclei': "#0094e1",
-            'other_nuclei': "#646464",
+            // 'bg': "#ffffff",
+            // 'tumor_nuclei': "#00ff00",
+            // 'stromal_nuclei': "#ff0000",
+            // 'immune_nuclei': "#0000ff",
+            // 'blood_cell': "#ff00ff",
+            // 'macrophage': "#ffff00",
+            // 'dead_nuclei': "#0094e1",
+            // 'other_nuclei': "#646464",
+            'Neutrophil': "#00ff00",
+            'Epithelial': "#ff0000",
+            'Lymphocyte': "#0000ff",
+            'Plasma': "#ff00ff",
+            'Eosinophil': "#ffff00",
+            'Connective': "#0094e1",
+            'tumor_nuclei': "#FF4500",  // OrangeRed
+            'stromal_nuclei': "#00BFFF",  // DeepSkyBlue
+            'immune_nuclei': "#8A2BE2",  // BlueViolet
+            'blood_cell': "#FFD700",  // Gold
+            'macrophage': "#228B22",  // ForestGreen
+            'dead_nuclei': "#8B0000",  // DarkRed
+            'other_nuclei': "#FFFF00"  // Yellow
         };
 
-        const server = 'localhost'
+        //const server = '129.112.7.194'
+        const server = 'barn.swmed.edu'
         const displayAPI = `http://${server}:10010/proxy/dummy.dzi?image_id=${imgId}&file=${slideFolder}%2F${imgName}&registry=slide`;
         const paramAPI = `http://${server}:10010/proxy/params?image_id=${imgId}&registry=slide`;
         const yoloAPI = `http://${server}:10030/proxy/dummy.dzi?image_id=${imgId}&file=${slideFolder}%2F${imgName}&registry=yolov8-lung`;
         const yoloColonAPI = `http://${server}:10030/proxy/dummy.dzi?image_id=${imgId}&file=${slideFolder}%2F${imgName}&registry=yolov8-colon`;
+        const stardisttfAPI = `http://${server}:10030/proxy/dummy.dzi?image_id=${imgId}&file=${slideFolder}%2F${imgName}&registry=stardist-tf`;
         const chatAPI = `http://${server}:10040/copilot?image_id=${imgId}&file=${slideFolder}%2F${imgName}&caption=gpt-4o&rag=gpt-4o`;
-        const segmentAPI = `http://${server}:10060/segment?image_id=${imgId}&file=${slideFolder}%2F${imgName}&registry=sam2-b`;
+        const segmentAPI = `http://${server}:10050/segment?image_id=${imgId}&file=${slideFolder}%2F${imgName}&registry=sam2-b`;
 
         const database_url = `${server}:10020/annotation`;
         const annoAPI = {
@@ -104,10 +119,7 @@
 
 <div id="toolbars">
     <div id="manual-toolbar" class="inner"></div>
-    <div id="auto-toolbar">
-        <button id="smartpoly" value="off" type="button">EnableSmart</button>
-        <input type="text" id="tag-input" size="20" placeholder="Enter smart label">
-    </div>
+
     <div id="model-toolbar">
         <div class="model-btn-grp btn-group">                  
             <div class="dropdown-btn">
@@ -117,9 +129,10 @@
                 <div class="dropdown-menu" aria-labelledby="modelSelector" style="">
                     <a class="dropdown-item" href="#" onclick="selectModel({id: 'yolov8-lung', text: 'HDYolo-Lung', path: yoloAPI, annotator: 'yolov8-lung'})">HDYolo-Lung</a>
                     <a class="dropdown-item" href="#" onclick="selectModel({id: 'yolov8-colon', text: 'HDYolo-Colon', path: yoloColonAPI, annotator: 'yolov8-colon'})">HDYolo-Colon</a>
+                    <a class="dropdown-item" href="#" onclick="selectModel({id: 'stardist-tf', text: 'Stardist', path: stardisttfAPI, annotator: 'stardist-tf'})">Stardist</a>
                 </div>
             </div>
-            <div id="modelDisplay" class="model-display model-display-secondary">HDYolo-Lung</div>
+            <div id="modelDisplay" class="model-display model-display-secondary">AI Nuclei Labeling</div>
                 <div class="run-stop-btn">
                     <button id="runStopButton" type="button" class="btn btn-sm model-btn btn-secondary">
                         <i id="runStopIcon" class="fa fa-play"></i>
@@ -127,8 +140,14 @@
                 </div>
              </div>
         </div>
+
+        <div id="auto-toolbar">
+            <button id="smartpoly" value="off" type="button">AI Segmentation</button>
+            <input type="text" id="tag-input" size="15" placeholder="Enter smart label">
+        </div>
+
         <div id="other-toolbar">
-            <button id="showColor" value="off" type="button">Show Label Colors</button>
+            <button id="showColor" value="off" type="button"  class="w-100">Label Palette</button>
         </div>
         <div id="coords">
             <label for="coordX">x:</label>
@@ -153,7 +172,6 @@
 </div>
 
 <script type="text/javascript">
-$(function() {
     let maxZoomPixelRatio = mpp ? mpp / 0.25 * 2 : 2;
     var viewer = new OpenSeadragon({
         id: "view",
@@ -214,14 +232,50 @@ $(function() {
     annotationLayer.enableEditing(userId);
     annotationLayer.draw(); // annotationLayer.hide();
 
-     //--- HDYolo models selecting ---
+    // var layerQueuesCheckInterval;
+    addTile = (viewer, regionalTile) => {
+        viewer.addTiledImage({
+            tileSource: regionalTile,
+            x: 0,
+            opacity: 0.5
+        });
+    }
+
+    removeTile = (viewer, tileName) => {
+    var count = viewer.world.getItemCount();
+    for (i = 0; i < count; i++) {
+        tiledImage = viewer.world.getItemAt(i);
+        if (tiledImage.source.queryParams.input === tileName) {
+            //set selected addedtileimage opacity to 0
+            tiledImage.setOpacity(0);
+            // viewer.world.removeItem(tiledImage);
+            break;
+            }
+        }
+    }
+
+    document.getElementById('runStopButton').addEventListener('click', function() {
+        console.log("runStopButton eventlistner")
+         // Check if currentModel is defined
+        if (typeof currentModel === 'undefined') {
+            // If currentModel is undefined, disable the button (gray it out) and do not call toggleRunning
+           
+        } else {
+            // If currentModel is defined, proceed with calling toggleRunning
+            toggleRunning(!modelIsRunning, currentModel);
+        }
+    });
+
+
+     //--- AI nuclei labeling models selection ---
     let modelIsRunning = false;
-    let currentModel = {
-        id: "yolov8-lung", 
-        text: "HDYolo-Lung", 
-        path: yoloAPI, 
-        annotator: "yolov8-lung"
-    };
+    let currentModel;
+    // = {
+        // id: "yolov8-lung", 
+        // text: "HDYolo-Lung", 
+        // path: yoloAPI, 
+        // annotator: "yolov8-lung"
+    // };
 
     function toggleRunning(start = true, toggleModel) {
         const controlBtn = document.getElementById('runStopButton');
@@ -232,16 +286,7 @@ $(function() {
         if (start) {
             if (toggleModel) {
                 annotationLayer.addAnnotator(toggleModel.id);
-                    // layerQueuesCheckInterval = setInterval(checkViewportLevelAndDisplayHelpMessage, 1000);
                 addTile(viewer, toggleModel.path);
-                    // if ($("#floatingWindow-left").hasClass("ui-dialog-content")) {
-                    //     // The dialog is open, so close it
-                    //     $("#floatingWindow-left").dialog("close");
-                    // }
-                    // if ($("#floatingWindow-right").hasClass("ui-dialog-content")) {
-                    //     // The dialog is open, so close it
-                    //     $("#floatingWindow-right").dialog("close");
-                    // }
             }
             controlBtn.classList.remove('btn-secondary');
             controlBtn.classList.add('btn-primary');
@@ -253,10 +298,7 @@ $(function() {
             modelDisplay.classList.add('model-display-primary');
             modelIsRunning = true;
         } else {
-                // Stop the model
             if(toggleModel){
-                    // clearInterval(layerQueuesCheckInterval); 
-                    // hideInstructions(helpMessage);
                 removeTile(viewer, toggleModel.path);
             }
             controlBtn.classList.remove('btn-primary');
@@ -283,36 +325,7 @@ $(function() {
         console.log("curren model", currentModel.text)
     }
 
-    //--- End of HDYolo models selecting ---
-
-
-    // var layerQueuesCheckInterval;
-    addTile = (viewer, regionalTile) => {
-        viewer.addTiledImage({
-            tileSource: regionalTile,
-            x: 0,
-            opacity: 0.5
-        });
-    }
-
-    removeTile = (viewer, tileName) => {
-    var count = viewer.world.getItemCount();
-    for (i = 0; i < count; i++) {
-        tiledImage = viewer.world.getItemAt(i);
-        if (tiledImage.source.queryParams.input === tileName) {
-            //set selected addedtileimage opacity to 0
-            tiledImage.setOpacity(0);
-            // viewer.world.removeItem(tiledImage);
-            break;
-            }
-        }
-    }
-
-    document.getElementById('runStopButton').addEventListener('click', function() {
-        console.log("runStopButton eventlistner")
-        toggleRunning(!modelIsRunning, currentModel);
-    });
-
+    //--- AI nuclei labeling models selection ---
 
     // Add a scale bar
     viewer.scalebar({
@@ -386,5 +399,5 @@ $(function() {
             smartPolyBtn.textContent = 'EnableSmart';
         }
     });
-});
+
 </script>
