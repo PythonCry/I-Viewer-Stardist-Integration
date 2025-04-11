@@ -120,6 +120,31 @@ AGENT_CONFIGS = {
 
 ---
 
+## Quick Start: Testing the Stardist Integration
+ 
+Follow these steps to verify that the Stardist segmentation layer is working correctly:
+ 
+1. **Open the test page**  
+   In your web browser, open `template/index.html`.
+ 
+2. **Select the Stardist model**  
+   - Click the model dropdown (the ▼ next to the current model name).  
+   - Choose **Stardist**.  
+   - Click the **Run** button (▶️) to launch Stardist.
+ 
+3. **Navigate the slide**  
+   Pan and zoom by dragging and scrolling over the image.
+ 
+4. **Load the stardist‑tf layer**  
+   - Click the **last gray (no‑icon) floating button** at the top‑left of the viewer to open the Annotators panel.  
+   - In the panel, select **stardist‑tf**.  
+   - Click **OK** to apply.
+ 
+5. **View the results**  
+   The **stardist‑tf** segmentation overlay should now appear on the slide.
+
+---
+
 ## License
 
 The software package is [licensed](https://github.com/impromptuRong/iviewer_copilot/blob/master/LICENSE). 
